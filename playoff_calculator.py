@@ -18,6 +18,7 @@ class Node:
         self.value = value   # dict of team's win counts
         self.week = week     # fantasy football week
         self.next = None     # list of next weeks nodes
+        self.tiebreaker = False # Does this scenario require a tiebreaker win to make the playoffs.
         self.previous = None # TODO: previous week node if needed
 
     def __str__(self):
@@ -84,12 +85,13 @@ def run(league):
         scenarios[team.team_name].next = build_node_tree(league)
 
     for team, node in scenarios.items():
-        calculate_playoff_scenarios(team, node, league)
+        calculate_playoff_scenarios(team, node, league.weeks_remaining, league.playoff_team_count, node.value)
     
     results = {}
     for team, node in scenarios.items():
         # Convert node structure into straight list
-        scenario_list = compile_scenario_list(node, [])
+        scenario_data = compile_scenario_list(node, [])
+        scenario_list = scenario_data['scenarios']
 
         json_dict = {}
         if len(scenario_list[0]) <= 1:
@@ -109,8 +111,8 @@ def run(league):
                     loop_json = loop_json[0]['next']
 
             if clinched:
-                print('{} has been clinched a playoff birth.'.format(team))
-                json_dict = { 'value': 'clinched' }
+                print('{} has clinched a playoff birth.'.format(team))
+                json_dict = {'value': 'clinched'}
         
         results[team] = json_dict
 
@@ -190,52 +192,52 @@ def remove_irrelevant_outcomes(sequences, team, num_playoff_teams, remaining_sch
     """
     
     print("Info: Filtering Unique Results: ", team)
-    if team ==  'TuAnon Believer':
-        for sequence in sequences:
-            # The first value in each sequence is the current standings - skip this in the following loop.
-            for idx, scenario in enumerate(sequence[1:].copy()):
-                scenario_copy = scenario.copy()
-                for key, value in scenario_copy.items():
-                    sequence_modified = sequence.copy()
-                    scenario_modified = scenario_copy.copy()
+    for sequence in sequences:
+        # The first value in each sequence is the current standings - skip this in the following loop.
+        for idx, scenario in enumerate(sequence[1:].copy()):
+            scenario_copy = scenario.copy()
+            for key, value in scenario_copy.items():
+                sequence_modified = sequence.copy()
+                scenario_modified = scenario_copy.copy()
 
-                    # TODO: not working on second loop on 2+ weeks
-                    #Somthing must be wrong with ccopying somewhere, first iteration works as expected.
+                # TODO: not working on second loop on 2+ weeks
+                # Somthing must be wrong with copying somewhere, first iteration works as expected.
+                # TODO: wins without tie breaker is not working sequences[1] for TuAnon Believer.
 
+                # Change the result of a single matchup.
+                matchup = next(matchup for matchup in remaining_schedule[idx] if key in matchup)
+                opposing_team = matchup[1] if matchup[0] == key else matchup[0] 
+                if value == 1:
+                    scenario_modified[key] = 0
+                    scenario_modified[opposing_team] = 1
+                else:
+                    scenario_modified[key] = 1
+                    scenario_modified[opposing_team] = 0
 
-                    # Change the result of a single matchup.
-                    matchup = next(matchup for matchup in remaining_schedule[idx] if key in matchup)
-                    opposing_team = matchup[1] if matchup[0] == key else matchup[0] 
-                    if value == 1:
-                        scenario_modified[key] = 0
-                        scenario_modified[opposing_team] = 1
-                    else:
-                        scenario_modified[key] = 1
-                        scenario_modified[opposing_team] = 0
+                sequence_modified[idx+1] = scenario_modified
 
-                    sequence_modified[idx+1] = scenario_modified
-
-                    # TODO: Do I need to loop through every result and see if the alternate matchup out come changes playoff scenario before removing? I think yes...
-                    # For each other team assume they win out.
-
-                    # Build standings objecect with changed result.
-                    standings = sequence[0].copy()
-                    for x in sequence_modified[1:]:
-                        for team2, result in x.items():
-                            standings[team2] += result
-
-                    # If this does not change whether the team makes the playoffs or not, the outcome is irrelevant and should be removed.
-                    if standings[team] >= wins_needed(standings, 0, num_playoff_teams, False):
-                        sequence[idx+1].pop(key, None)
-
-                #TODO: Mark if playoff it is a tie for the playoffs.
+                # TODO: Do I need to loop through every result and see if the alternate matchup out come changes playoff scenario before removing? I think yes...
+                # For each other team assume they win out. I need to do this for every possible combination... fuck!
 
 
+                # Build standings objecect with changed result.
+                standings = sequence[0].copy()
+                for x in sequence_modified[1:]:
+                    for team2, result in x.items():
+                        standings[team2] += result
 
-def wins_needed(standings, weeks_remaining, num_playoff_teams, without_tiebreaker):
+                # If this does not change whether the team makes the playoffs or not, the outcome is irrelevant and should be removed.
+                if standings[team] >= wins_needed(standings, 0, num_playoff_teams, key, False)['wins']:
+                    sequence[idx+1].pop(key, None)
+
+            #TODO: Mark if playoff it is a tie for the playoffs.
+
+
+
+def wins_needed(standings, weeks_remaining, num_playoff_teams, playoff_team, without_tiebreaker):
     """ Calculates the minimum number of wins a team needs to make the playoffs assuming they will win out. """
 
-    without_tiebreaker = True
+    playoff_status = {'tiebreaker': False}
     standings = dict(sorted(standings.items(), key=lambda item: item[1], reverse=True))
     min_playoff_wins = 0
     teams_included = 0
@@ -243,30 +245,37 @@ def wins_needed(standings, weeks_remaining, num_playoff_teams, without_tiebreake
         if num_playoff_teams > teams_included:
             min_playoff_wins = standings[team]
             teams_included += 1
-        elif min_playoff_wins == standings[team] and without_tiebreaker:
-            min_playoff_wins += 1
+        elif min_playoff_wins == standings[team] and playoff_team == team:
+            playoff_status['tiebreaker'] = True
     
-    return min_playoff_wins + weeks_remaining
+    playoff_status['wins'] = min_playoff_wins + weeks_remaining
+    return playoff_status
 
 
 
-def calculate_playoff_scenarios(team, node, league):
+def calculate_playoff_scenarios(team, node, weeks_remaining, num_playoff_teams, standings):
     """  """
-    # TODO: clean function.
-    weeks_remaining = league.weeks_remaining
-    num_playoff_teams = league.playoff_team_count
 
     for scenario in node.next.copy():
-        x = scenario.value.copy()
-        for key, value in node.value.items():
-            x[key] += value
-        wins = wins_needed(x, weeks_remaining, num_playoff_teams, False)
+        standings_copy = copy.deepcopy(standings) # Do I need a deep copy here
+        # if scenario.value['Calvin Ridely\'s Parlays'] == 1 and scenario.value['Kyler\'s Study Zone'] == 0 and scenario.value['Hooked on a Thielen'] == 1 and scenario.value['Scam Akers'] == 0 and scenario.value['Hurts Doughnut'] == 0 and scenario.value['TuAnon Believer'] == 1 and scenario.value['Game of Mahomes'] == 0 and scenario.value['Zeke and Destroy'] == 1 and scenario.value['Mixon It Up'] == 0 and scenario.value['Breece Mode'] == 1 and scenario.value['The Adams Family'] == 1 and scenario.value['Olave Garden'] == 0:
+        #     print('here')
+        for key, value in scenario.value.items():
+            standings_copy[key] += value
+        playoff_status = wins_needed(standings_copy, weeks_remaining-1, num_playoff_teams, team, False)
+        wins = playoff_status['wins']
         # assume the team will win out, we will handle the situation in which they don't in future iterations.
-        scenario.value = get_unique_scenarios(scenario)
-        if x[team] + weeks_remaining < wins:
+        scenario.value = scenario.value
+        if standings_copy[team] + weeks_remaining-1 < wins:
             node.next.remove(scenario)
-        if not scenario.next:
-            calculate_playoff_scenarios(team, scenario, league)
+        elif scenario.next:
+            # Remove irrelevant outcomes could be here
+            # Then build scenerio list directly from here, a list for each child node that matches the playoff condition.
+
+            calculate_playoff_scenarios(team, scenario, weeks_remaining-1, num_playoff_teams, standings_copy)
+        elif playoff_status['tiebreaker']:
+            # Only need to mark the last week
+            scenario.tiebreaker = True
 
 
 
@@ -360,20 +369,35 @@ def compile_scenario_list(node, path):
     """
     scenarios = []
     if not node.next:
+        scenario_data = {}
         outcome = {}
         for team, value in node.value.items():
             outcome.update({team: value})
 
-        next_path = path.copy()
+        next_path = copy.deepcopy(path)
         next_path.append(outcome)
         scenarios.append(next_path)
+
+        if node.tiebreaker:
+            scenario_data['tiebreaker'] = True
+        scenario_data['scenarios'] = scenarios
+        return scenario_data
     else:
         next_path = path.copy()
         next_path.append(node.value)
         for next in node.next:
-            for scenario in compile_scenario_list(next, next_path):
-                scenarios.append(copy.deepcopy(scenario))
-    return scenarios
+            scenario_data = compile_scenario_list(next, next_path)
+            for scenario in scenario_data['scenarios']:
+                data = {'scenarios': copy.deepcopy(scenario) }
+                if 'tiebreaker' in scenario_data and scenario_data['tiebreaker']:
+                    data['tiebreaker'] = True
+                elif len(scenario_data['scenarios']) == 1:
+                    data['tierbreaker'] = False
+                scenarios.append(data)
+                
+        scenario_data = { 'scenarios': scenarios }
+        return scenario_data
+        #TODO: If this is parent return call only return scenario_list (scenarios)
 
 
 

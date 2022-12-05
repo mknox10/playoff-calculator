@@ -1,6 +1,6 @@
 import unittest
 
-from playoff_calculator import League, Team, run
+from playoff_calculator import League, Team, Node, run, build_node_tree, calculate_playoff_scenarios, compile_scenario_list, wins_needed
 
 # https://realpython.com/python-testing/#automated-vs-manual-testing
 
@@ -44,7 +44,7 @@ class TestPlayoffCalculator(unittest.TestCase):
         taunon_believer_expected_results = {'TuAnon Believer': 1, 'Game of Mahomes': 0}
         game_of_mahomes_expected_results = {'Game of Mahomes': 1, 'TuAnon Believer': 0}
 
-        results = run(league)
+        # results = run(league)
 
         # self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
         # self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
@@ -65,7 +65,6 @@ class TestPlayoffCalculator(unittest.TestCase):
         # self.assertEqual(tuanon_believer_results['next'][0]['value'], taunon_believer_expected_results)
         # self.assertEqual(game_of_mahomes_results['next'][0]['value'], game_of_mahomes_expected_results)
 
-
         # Test two weeks remaining
         week_14 = [
             ('Calvin Ridely\'s Parlays', 'Kyler\'s Study Zone'),
@@ -76,20 +75,42 @@ class TestPlayoffCalculator(unittest.TestCase):
             ('Breece Mode', 'Olave Garden')
         ]
 
-        league = League(teams, [week_13, week_14], 6, 13)
+        league = League(teams, [week_13, week_14], 6, 14)
+
+        standings = {}
+        for team in teams:
+            standings[team.team_name] = team.wins
+
+        node = Node(standings)
+        node.next = build_node_tree(league)
+
+        # calculate_playoff_scenarios('TuAnon Believer', node, league.weeks_remaining, league.playoff_team_count, node.value)
+        # scenario_list = compile_scenario_list(node, [])
+
+        # results = []
+        # for scenario in scenario_list:
+        #     scenario_standings = scenario[0]
+        #     for week in scenario[1:]:
+        #         for key, value in week.items():
+        #             scenario_standings[key] += value
+        #     results.append(scenario_standings)
+        #     if scenario_standings['TuAnon Believer'] < wins_needed(scenario_standings, 0, league.playoff_team_count, False):
+        #         print('uh oh')
+
+            
 
         results = run(league)
 
-        # self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
-        # self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
-        # self.assertEqual(results['Hooked on a Thielen'], CLINCHED)
-        # self.assertEqual(results['Scam Akers'], CLINCHED)
-        # self.assertEqual(results['Hurts Doughnut'], CLINCHED)
+        self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
+        self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
+        self.assertEqual(results['Hooked on a Thielen'], CLINCHED)
+        self.assertEqual(results['Scam Akers'], CLINCHED)
+        self.assertEqual(results['Hurts Doughnut'], CLINCHED)
         # self.assertEqual(results['Zeke and Destroy'], ELIMINATED)
         # self.assertEqual(results['The Adams Family'], ELIMINATED)
-        # self.assertEqual(results['Mixon It Up'], ELIMINATED)
-        # self.assertEqual(results['Breece Mode'], ELIMINATED)
-        # self.assertEqual(results['Olave Garden'], ELIMINATED)
+        self.assertEqual(results['Mixon It Up'], ELIMINATED)
+        self.assertEqual(results['Breece Mode'], ELIMINATED)
+        self.assertEqual(results['Olave Garden'], ELIMINATED)
 
         tuanon_believer_results = results['TuAnon Believer']
         game_of_mahomes_results = results['Game of Mahomes']
