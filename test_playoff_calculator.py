@@ -2,6 +2,8 @@ import unittest
 
 from playoff_calculator import League, Team, Node, run, build_node_tree, calculate_playoff_scenarios, compile_scenario_list, wins_needed
 
+import json
+
 # https://realpython.com/python-testing/#automated-vs-manual-testing
 
 ELIMINATED = { 'value': 'eliminated' }
@@ -37,34 +39,6 @@ class TestPlayoffCalculator(unittest.TestCase):
             ('TuAnon Believer', 'Game of Mahomes')
         ]
 
-
-        # Test one week remaining.
-        league = League(teams, [week_13], 6, 13)
-
-        taunon_believer_expected_results = {'TuAnon Believer': 1, 'Game of Mahomes': 0}
-        game_of_mahomes_expected_results = {'Game of Mahomes': 1, 'TuAnon Believer': 0}
-
-        # results = run(league)
-
-        # self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
-        # self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
-        # self.assertEqual(results['Hooked on a Thielen'], CLINCHED)
-        # self.assertEqual(results['Scam Akers'], CLINCHED)
-        # self.assertEqual(results['Hurts Doughnut'], CLINCHED)
-        # self.assertEqual(results['Zeke and Destroy'], ELIMINATED)
-        # self.assertEqual(results['The Adams Family'], ELIMINATED)
-        # self.assertEqual(results['Mixon It Up'], ELIMINATED)
-        # self.assertEqual(results['Breece Mode'], ELIMINATED)
-        # self.assertEqual(results['Olave Garden'], ELIMINATED)
-
-        # tuanon_believer_results = results['TuAnon Believer']
-        # game_of_mahomes_results = results['Game of Mahomes']
-
-        # self.assertEqual(len(tuanon_believer_results['next']), 1)
-        # self.assertEqual(len(game_of_mahomes_results['next']), 1)
-        # self.assertEqual(tuanon_believer_results['next'][0]['value'], taunon_believer_expected_results)
-        # self.assertEqual(game_of_mahomes_results['next'][0]['value'], game_of_mahomes_expected_results)
-
         # Test two weeks remaining
         week_14 = [
             ('Calvin Ridely\'s Parlays', 'Kyler\'s Study Zone'),
@@ -74,6 +48,34 @@ class TestPlayoffCalculator(unittest.TestCase):
             ('The Adams Family', 'Mixon It Up'),
             ('Breece Mode', 'Olave Garden')
         ]
+
+
+        # Test one week remaining.
+        league = League(teams, [week_13], 6, 13)
+
+        taunon_believer_expected_results = {'TuAnon Believer': 1, 'Game of Mahomes': 0}
+        game_of_mahomes_expected_results = {'Game of Mahomes': 1, 'TuAnon Believer': 0}
+
+        results = run(league)
+
+        self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
+        self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
+        self.assertEqual(results['Hooked on a Thielen'], CLINCHED)
+        self.assertEqual(results['Scam Akers'], CLINCHED)
+        self.assertEqual(results['Hurts Doughnut'], CLINCHED)
+        self.assertEqual(results['Zeke and Destroy'], ELIMINATED)
+        self.assertEqual(results['The Adams Family'], ELIMINATED)
+        self.assertEqual(results['Mixon It Up'], ELIMINATED)
+        self.assertEqual(results['Breece Mode'], ELIMINATED)
+        self.assertEqual(results['Olave Garden'], ELIMINATED)
+
+        tuanon_believer_results = results['TuAnon Believer']
+        game_of_mahomes_results = results['Game of Mahomes']
+
+        self.assertEqual(len(tuanon_believer_results['next']), 1)
+        self.assertEqual(len(game_of_mahomes_results['next']), 1)
+        self.assertEqual(tuanon_believer_results['next'][0]['value'], taunon_believer_expected_results)
+        self.assertEqual(game_of_mahomes_results['next'][0]['value'], game_of_mahomes_expected_results)
 
         league = League(teams, [week_13, week_14], 6, 14)
 
@@ -106,14 +108,22 @@ class TestPlayoffCalculator(unittest.TestCase):
         self.assertEqual(results['Hooked on a Thielen'], CLINCHED)
         self.assertEqual(results['Scam Akers'], CLINCHED)
         self.assertEqual(results['Hurts Doughnut'], CLINCHED)
-        # self.assertEqual(results['Zeke and Destroy'], ELIMINATED)
-        # self.assertEqual(results['The Adams Family'], ELIMINATED)
+
+        with open('playoff_scenarios_tuanon_believer.json'.format(team), 'w') as outfile:
+            json.dump(results['TuAnon Believer'], outfile)
+
+        # with open('playoff_scenarios_game_of_mahomes.json'.format(team), 'w') as outfile:
+            json.dump(results['Game of Mahomes'], outfile)
+
+        with open('playoff_scenarios_zeke_and_destroy.json'.format(team), 'w') as outfile:
+            json.dump(results['Zeke and Destroy'], outfile)
+
+        with open('playoff_scenarios_the_adams_family.json'.format(team), 'w') as outfile:
+            json.dump(results['The Adams Family'], outfile)
+
         self.assertEqual(results['Mixon It Up'], ELIMINATED)
         self.assertEqual(results['Breece Mode'], ELIMINATED)
         self.assertEqual(results['Olave Garden'], ELIMINATED)
-
-        tuanon_believer_results = results['TuAnon Believer']
-        game_of_mahomes_results = results['Game of Mahomes']
 
 
 
