@@ -1,8 +1,7 @@
 from distutils.command.build_scripts import first_line_re
 from re import match
 from turtle import pos
-# from espn_api.football import League
-from itertools import product
+from itertools import combinations, product
 import pandas as pd
 import json
 import espn_api.football as espn
@@ -30,6 +29,8 @@ class Node:
         copy.previous = self.previous.copy() if self.previous else None
         return copy
 
+
+
 class League:
     def __init__(self, teams, remaining_schedule, playoff_team_count, regular_season_game_count):
         self.teams = teams
@@ -38,12 +39,12 @@ class League:
         self.playoff_team_count = playoff_team_count
         self.regular_season_game_count = regular_season_game_count
 
+
+
 class Team:
     def __init__(self, team_name, wins):
         self.team_name = team_name
         self.wins = wins
-
-
 
 
 
@@ -95,10 +96,12 @@ def run(league):
         scenario_list = scenario_data
 
         json_dict = {}
+        # TODO: I don't think this is true if a team has one possible playoff scenario
         if len(scenario_list) <= 1:
             print('{} has been eliminated from playoff contention.'.format(team))
             json_dict = { 'value': 'eliminated'}
         else:
+
             remove_irrelevant_outcomes(scenario_list, team, league)
 
             json_dict = build_readable_json_structure({}, scenario_list)['next'][0]
@@ -154,9 +157,13 @@ def import_sleeper_league():
     """ Import league data from sleeper and store in local data structure. """
     raise Exception('Sleeper is not yet a supported platform.')
 
+
+
 def import_yahoo_league():
     """ Import data from espn and store in local data structure. """
     raise Exception('Yahoo is not yet a supported platform.')
+
+
 
 def build_standings(teams):
     """ Build a dictionary with each teams win count. """
@@ -197,127 +204,7 @@ def build_readable_json_structure(json, scenario_list):
         if 'next' in val:
             build_readable_json_structure(val, val['next'])
 
-    return json
-
-
-
-def remove_irrelevant_outcomes_from_json(json, team, num_playoff_teams, remaining_schedule):
-
-
-    print("Info: Filtering Unique Results")
-
-    
-        
-
-def remove_irrelevant_outcomes_old(sequences, team, num_playoff_teams, remaining_schedule):
-    """ 
-    Remove outcomes that do not effect playoff scenarios for the given team. 
-      sequences -         List of sequences. (See Definitions)
-      team -              The team whos playoff scenarios are being evaluated.
-      num_playoff_teams - The number of teams that make the playoffs.
-    """
-    
-    print("Info: Filtering Unique Results: ", team)
-    if team == 'TuAnon Believer':
-    # if True:
-        for sequence in sequences:
-            # The first value in each sequence is the current standings - skip this in the following loop.
-            for idx, scenario in enumerate(sequence['scenarios'][1:].copy()):
-                scenario_copy = scenario.copy()
-                irrelevant = False
-                for key, value in scenario_copy.items():
-
-                    #TODO: key should instead be the matchup both results of the matchup should be kept
-                    sequence_modified = copy.deepcopy(sequence['scenarios'])
-                    scenario_modified = scenario_copy.copy()
-
-
-                    # Change the result of a single matchup.
-                    # matchup = next(matchup for matchup in remaining_schedule[idx] if key in matchup)
-                    # opposing_team = matchup[1] if matchup[0] == key else matchup[0] 
-                    # if value == 1:
-                    #     scenario_modified[key] = 0
-                    #     scenario_modified[opposing_team] = 1
-                    # else:
-                    #     scenario_modified[key] = 1
-                    #     scenario_modified[opposing_team] = 0
-
-                    # sequence_modified[idx+1] = scenario_modified
-
-                    # TODO: Do I need to loop through every result and see if the alternate matchup out come changes playoff scenario before removing? I think yes...
-                    # For each other team assume they win out. I need to do this for every possible combination... fuck!
-                    # For each other possible outcome... use wins_needed to check if 'team' has made playoffs.
-                    # If and only if the 'team' makes the playoffs in every scenario then remove the key from the sequence['scenarios']
-
-                    # Do something like this...
-                    # case = ['W', 'L']
-                    # outcomes = []
-                    # for permutation in product(case, repeat=len(matchups)):
-                    #     scenario = {}
-                    #     for x in range(len(matchups)):
-                    #         matchup = matchups[x]
-                    #         outcome = permutation[x]
-                    #         scenario[matchup[0]] = 1 if outcome == 'W' else 0
-                    #         scenario[matchup[1]] = 0 if outcome == 'W' else 1
-                    #     node = Node(scenario, week_number)
-                    #     node.next = []
-                    #     outcomes.append(node)
-                    # return outcomes
-                    case = ['W', 'L']
-                    base_standings = sequence['scenarios'][0]
-
-
-    # I don't think we can do all permutations... we've already eliminated permutations in which a team misses the playoffs. I can't bring that back into the fold here.
-    # Retry the original design, does the opposite outcome for 'key' impact the playoff chances for 'team' for this specific scenario.
-    # Does the opposite outcome for key have impacts on future weeks?
-
-
-                    permutations = product(case, repeat=len(remaining_schedule[idx]))
-
-                    for permutation in permutations:
-                        updated_standings = copy.deepcopy(base_standings)
-                        for x in range(len(remaining_schedule[idx])):
-                            case_matchup = remaining_schedule[idx][x]
-                            if case_matchup[0] == key or case_matchup[1] == key:
-                                #TODO: this does not need to be in loop. Could then decrease permutation length by 1...
-                                if case_matchup[0] == key:
-                                    updated_standings[case_matchup[0]] += value
-                                    updated_standings[case_matchup[1]] += 0 if value == 1 else 1
-                                elif case_matchup[1] == key:
-                                    updated_standings[case_matchup[0]] += 0 if value == 1 else 1
-                                    updated_standings[case_matchup[1]] += value
-                            else:
-                                outcome = permutation[x]
-                                updated_standings[case_matchup[0]] += 1 if outcome == 'W' else 0
-                                updated_standings[case_matchup[1]] += 0 if outcome == 'W' else 1
-
-                        initial_update = copy.deepcopy(updated_standings)
-                
-                        for i, x in enumerate(sequence_modified):
-                            # Don't do week of permutations
-                            if i != 0 and i != idx+1:
-                                for team2, result in x.items():
-                                    updated_standings[team2] += result
-                        
-                        #TODO: what conditions should the outcome be marked as irrelevant? - Should only be removed if all permutations lead to this same outcome
-                        wins_data = wins_needed(updated_standings, 0, num_playoff_teams, team)
-
-                        # Doesn't seem like the cleanest solution. If the below if statement is True for every permutation then the scenario is irrelevant
-                        if updated_standings[team] >= wins_data['wins'] and wins_data['tiebreaker'] == sequence['tiebreaker']:
-                            irrelevant = True
-                        else:
-                            # Outcome (key) is relevant to playoff scenarios
-                            irrelevant = False
-                            break
-                    if irrelevant:
-                        sequence['scenarios'][idx+1].pop(key, None)
-
-                # Build standings objecect with changed result.
-
-                # If this does not change whether the team makes the playoffs or not, the outcome is irrelevant and should be removed.
-
-            #TODO: Mark if playoff it is a tie for the playoffs.
-
+    return json 
 
 
 
@@ -325,16 +212,16 @@ def remove_irrelevant_outcomes(playoff_scenarios, team, league):
 
 
     print("Info: Filtering Unique Results: ", team)
-    testing_team =  'Hooked on a Thielen'
-
+    testing_team =  'Zeke and Destroy'
     if team == testing_team:
         print(testing_team)
     if True:
-        for scenario in playoff_scenarios:
+        for scenario in playoff_scenarios.copy():
             scenario_copy = copy.deepcopy(scenario)
 
             base_standings = scenario['scenarios'][0]
             irrelevant_events = []
+            irrelevant_clinched_or_eliminated_teams = []
 
             team_total_wins = base_standings[team] #TODO: I don't think this is needed.
 
@@ -343,6 +230,7 @@ def remove_irrelevant_outcomes(playoff_scenarios, team, league):
                 team_total_wins += event[team]
 
                 irrelevant_teams = []
+                clinched_or_eliminated_teams = []
                 # Loop through each matchup for the given week.
                 for matchup in league.remaining_schedule[idx1]:
 
@@ -354,7 +242,7 @@ def remove_irrelevant_outcomes(playoff_scenarios, team, league):
                     home_team = matchup[1]
 
                     # Change outcome of the matchup to check if it is irrelevant
-                    event_copy[away_team] = 0 if event[away_team] else 1 #TODO: This conditional could be a funciton.
+                    event_copy[away_team] = 0 if event[away_team] else 1 #TODO: This conditional could be a function.
                     event_copy[home_team] = 0 if event[home_team] else 1 
 
                     for idx2, updated_event in enumerate(scenario['scenarios'][1:]):
@@ -362,46 +250,81 @@ def remove_irrelevant_outcomes(playoff_scenarios, team, league):
                         for event_team, event_outcome in event_outcomes.items():
                             modified_standings[event_team] += event_outcome
                             full_standings[event_team] += updated_event[event_team]
-                        
 
-                    wins_data = wins_needed(modified_standings, 0, league.playoff_team_count, team)
+                    wins_data = wins_needed(modified_standings, league.playoff_team_count, team)
+
+                    # Check if both teams are irrelevant.
                     if modified_standings[team] >= wins_data['wins'] and wins_data['tiebreaker'] == scenario['tiebreaker']:
-                        irrelevant_teams.append(matchup[0])
-                        irrelevant_teams.append(matchup[1])
-            
-                irrelevant_events.append(irrelevant_teams)
+                        irrelevant_teams.append(away_team)
+                        irrelevant_teams.append(home_team)
 
+                    # Check if one of the matchup's teams has been eliminated or has clinched.
+                    full_standings_wins_data = wins_needed(full_standings, league.playoff_team_count, team)
+
+                    away_team_wins = base_standings[away_team]
+                    if away_team_wins > full_standings_wins_data['wins'] or (full_standings_wins_data['tiebreaker'] and away_team_wins == full_standings_wins_data['wins']) or (away_team_wins + len(scenario['scenarios']) < full_standings_wins_data['wins']):
+                        clinched_or_eliminated_teams.append(away_team)
+
+                    home_team_wins = base_standings[home_team]
+                    if home_team_wins > full_standings_wins_data['wins'] or (full_standings_wins_data['tiebreaker'] and home_team_wins == full_standings_wins_data['wins']) or (home_team_wins + len(scenario['scenarios']) < full_standings_wins_data['wins']):
+                        clinched_or_eliminated_teams.append(home_team)
+                        
+                irrelevant_events.append(irrelevant_teams)
+                irrelevant_clinched_or_eliminated_teams.append(clinched_or_eliminated_teams)
+
+            scenario_or_conditions = {}
+            original_scenario_copy = copy.deepcopy(scenario)
             for irrelevant_team in league.teams:
-                irrelevant_weeks = 0
+                irrelevant_weeks = []
                 team_has_potential_irrelevant_outcomes = False
                 # wins_needed - league_team add weeks remaining to win count.
-                for irrelevant_week in irrelevant_events:
+                for idx, irrelevant_week in enumerate(irrelevant_events):
                     if irrelevant_team.team_name in irrelevant_week:
-                        irrelevant_weeks += 1
+                        irrelevant_weeks.append(idx+1)
                         team_has_potential_irrelevant_outcomes = True
 
                 total_irrelevant_matchups_allowed = irrelevant_outcomes_allowed(team, irrelevant_team.team_name, copy.deepcopy(full_standings), scenario['tiebreaker'], league, scenario['scenarios'][1:])
 
                 if team_has_potential_irrelevant_outcomes:
-                    if irrelevant_weeks > total_irrelevant_matchups_allowed:
-                        if team == testing_team:
-                            # Both Mixon It Up and Hooked on a Thielen lost in week 13, while Scam Akers and The Adams Family both won... Interesting... scenarios are defs out of order...
-                            huh = irrelevant_outcomes_allowed(team, irrelevant_team.team_name, copy.deepcopy(full_standings), scenario['tiebreaker'], league, scenario['scenarios'][1:])
+                    if len(irrelevant_weeks) > total_irrelevant_matchups_allowed and total_irrelevant_matchups_allowed == 0:
+                        pass # Matchups cannot be removed.
+                    elif len(irrelevant_weeks) > total_irrelevant_matchups_allowed:
+                        scenario_or_conditions[irrelevant_team.team_name] = []
+                        for idx, event in enumerate(irrelevant_events):
+                            if irrelevant_team.team_name in irrelevant_events[idx]:
+                                scenario['scenarios'][idx+1].pop(irrelevant_team.team_name, None)
+
+                        # terrible variable name
+                        for combination in combinations(irrelevant_weeks, total_irrelevant_matchups_allowed):
+                            combination_set = []
+                            for week in combination:
+                                combination_set.append(week)
+                            scenario_or_conditions[irrelevant_team.team_name].append(combination_set)
+
                     else:
                         # This teams outcomes are indeed irrelevant. Go forward with removing them.
                         for idx, event in enumerate(irrelevant_events):
                             if irrelevant_team.team_name in irrelevant_events[idx]:
                                 scenario['scenarios'][idx+1].pop(irrelevant_team.team_name, None)
-                else: 
-                    temp = 'huh'
 
+            # Remove teams that have clinched or have been eliminated who are facing teams who's outcome has playoff implications.
+            for idx, clinched_or_eliminated_teams in enumerate(irrelevant_clinched_or_eliminated_teams):
+                for clinched_or_eliminated_team in clinched_or_eliminated_teams:
+                    scenario['scenarios'][idx+1].pop(clinched_or_eliminated_team, None)
+
+            for irrelevant_team_or, combinations_ in scenario_or_conditions.items():
+                for combination in combinations_:
+                    if scenario in playoff_scenarios:
+                        playoff_scenarios.remove(scenario)
+                    new_scenario_copy = copy.deepcopy(scenario)
+                    for week in combination:
+                        new_scenario_copy['scenarios'][week][irrelevant_team_or] = original_scenario_copy['scenarios'][week][irrelevant_team_or]
+                    playoff_scenarios.append(new_scenario_copy)
                     
 def irrelevant_outcomes_allowed(playoff_team, irrelevant_team, standings, tiebreaker, league, remaining_outcomes):
     """ Determines the maximum number of games a team's matchup can be marked as irrelevant. """
     # TODO: When calculating which teams a team must outscore when calculating tiebreakers this function will need to be adjusted.
     #           This function only accounts for whether or not a tiebreaker is needed, not which teams the tiebreaker is need for.
-
-    # TODO: This might need to be looped by matchup...
 
     max_irrelevant_games = 0
     no_changes = True
@@ -413,7 +336,7 @@ def irrelevant_outcomes_allowed(playoff_team, irrelevant_team, standings, tiebre
         standings[irrelevant_team] += 0 if remaining_outcomes[x][irrelevant_team] else 1
         standings[irrelevant_team_opponent] -= 0 if remaining_outcomes[x][irrelevant_team] else 1
 
-        wins_data = wins_needed(standings, 0, league.playoff_team_count, playoff_team)
+        wins_data = wins_needed(standings, league.playoff_team_count, playoff_team)
         if wins_data['tiebreaker'] == tiebreaker and standings[playoff_team] >= wins_data['wins']:
             max_irrelevant_games += 1
         else:
@@ -424,9 +347,7 @@ def irrelevant_outcomes_allowed(playoff_team, irrelevant_team, standings, tiebre
 
 
 
-
-
-def wins_needed(standings, weeks_remaining, num_playoff_teams, playoff_team):
+def wins_needed(standings, num_playoff_teams, playoff_team):
     """ Calculates the minimum number of wins a team needs to make the playoffs assuming they will win out. """
 
     standings = dict(sorted(standings.items(), key=lambda item: item[1], reverse=True))
@@ -444,7 +365,7 @@ def wins_needed(standings, weeks_remaining, num_playoff_teams, playoff_team):
     
     playoff_status = {}
     playoff_status['tiebreaker'] = tiebreaker_needed and standings[playoff_team] == min_playoff_wins
-    playoff_status['wins'] = min_playoff_wins + weeks_remaining
+    playoff_status['wins'] = min_playoff_wins
     return playoff_status
 
 
@@ -452,22 +373,21 @@ def wins_needed(standings, weeks_remaining, num_playoff_teams, playoff_team):
 def calculate_playoff_scenarios(team, node, weeks_remaining, num_playoff_teams, standings):
     """  """
 
+    if team == 'Zeke and Destroy':
+        x = 'val'
+
+
     for scenario in node.next.copy():
-        standings_copy = copy.deepcopy(standings) # Do I need a deep copy here
-        # if scenario.value['Calvin Ridely\'s Parlays'] == 1 and scenario.value['Kyler\'s Study Zone'] == 0 and scenario.value['Hooked on a Thielen'] == 1 and scenario.value['Scam Akers'] == 0 and scenario.value['Hurts Doughnut'] == 0 and scenario.value['TuAnon Believer'] == 1 and scenario.value['Game of Mahomes'] == 0 and scenario.value['Zeke and Destroy'] == 1 and scenario.value['Mixon It Up'] == 0 and scenario.value['Breece Mode'] == 1 and scenario.value['The Adams Family'] == 1 and scenario.value['Olave Garden'] == 0:
-        #     print('here')
+        standings_copy = copy.deepcopy(standings)
         for key, value in scenario.value.items():
             standings_copy[key] += value
-        playoff_status = wins_needed(standings_copy, weeks_remaining-1, num_playoff_teams, team)
+
+        playoff_status = wins_needed(standings_copy, num_playoff_teams, team)
         wins = playoff_status['wins']
         # assume the team will win out, we will handle the situation in which they don't in future iterations.
-        scenario.value = scenario.value
         if standings_copy[team] + weeks_remaining-1 < wins:
             node.next.remove(scenario)
         elif scenario.next:
-            # Remove irrelevant outcomes could be here
-            # Then build scenerio list directly from here, a list for each child node that matches the playoff condition.
-
             calculate_playoff_scenarios(team, scenario, weeks_remaining-1, num_playoff_teams, standings_copy)
         elif playoff_status['tiebreaker']:
             # Only need to mark the last week
@@ -528,8 +448,17 @@ def build_node_tree(league):
         matchups = remaining_schedule.pop(0)
         outcomes = calculate_weekly_outcomes(matchups, reg_season_count - len(remaining_schedule))
         if len(previous_week_outcomes) > 0:
-            for outcome in previous_week_outcomes:
-                outcome.next = outcomes
+            for idx, outcome in enumerate(previous_week_outcomes):
+                outcome.next = copy.deepcopy(outcomes)
+                # For some fucking reason this boolean is evaluating to true when it is in fact false.
+                if outcome.value['Zeke and Destroy'] == 1 and outcome.value['TuAnon Believer'] == 0 and outcome.value['Game of Mahomes'] == 1:
+                        for dix2, val in enumerate(outcomes):
+                            if val.value['Zeke and Destroy'] == 1 and val.value['TuAnon Believer'] == 1 and val.value['Game of Mahomes'] == 0:
+                                val = 'yo wtf'
+                            else: 
+                                val = 'gtfo2'
+                else:
+                    val = 'gtfo'
         else:
             first_week_outcomes = outcomes
         previous_week_outcomes = outcomes
@@ -583,20 +512,10 @@ def compile_scenario_list(node, path):
         next_path.append(node.value)
         for next in node.next:
             scenario_data = compile_scenario_list(next, next_path)
-            # for scenario in scenario_data['scenarios']:
             for scenario in scenario_data:
-                # data = { 'scenarios': copy.deepcopy(scenario) }
-                # if 'tiebreaker' in scenario_data and scenario_data['tiebreaker']:
-                #     data['tiebreaker'] = True
-                # elif len(scenario_data['scenarios']) == 1:
-                #     data['tierbreaker'] = False
                 scenarios.append(copy.deepcopy(scenario))
                 
-        # scenario_data = { 'scenarios': scenarios }
-        # if not path:
-        #     return scenario_data['scenarios']
         return scenarios
-        #TODO: If this is parent return call only return scenario_list (scenarios)
 
 
 
@@ -633,7 +552,6 @@ def export_data_to_csv(scenarios, teams):
 
         playoff_scenarios = pd.DataFrame(results, columns=column_headers)
         playoff_scenarios.to_csv('playoff_scenarios_{}.csv'.format(team.team_name))
-
 
 
 

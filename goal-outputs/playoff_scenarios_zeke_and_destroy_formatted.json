@@ -1,0 +1,49 @@
+[
+    {
+        "value": {
+            "Zeke and Destroy": 1
+        },
+        "next": [
+            {
+                "value": {
+                    "TuAnon Believer": 0,
+                    "Game of Mahomes": 0,
+                    "Zeke and Destroy": 1
+                },
+                "tiebreaker": true
+            }
+        ]
+    },
+    {
+        "value": {
+            "Zeke and Destroy": 1,
+            "TuAnon Believer": 0,
+            "Game of Mahomes": 1
+        },
+        "next": [
+            {
+                "value": {
+                    "TuAnon Believer": 1,
+                    "Game of Mahomes": 0,
+                    "Zeke and Destroy": 1
+                },
+                "tiebreaker": true
+            }
+        ]
+    },
+    {
+        "value": {
+            "Zeke and Destroy": 1,
+            "TuAnon Believer": 0
+        },
+        "next": [
+            {
+                "value": {
+                    "Game of Mahomes": 0,
+                    "Zeke and Destroy": 1
+                },
+                "tiebreaker": true
+            }
+        ]
+    }
+]
