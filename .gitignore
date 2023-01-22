@@ -1,0 +1,4 @@
+# ignore output files
+actual-outputs/
+
+__pycache__/
