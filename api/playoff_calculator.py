@@ -212,9 +212,6 @@ def remove_irrelevant_outcomes(playoff_scenarios, team, league):
 
 
     print("Info: Filtering Unique Results: ", team)
-    testing_team =  'Zeke and Destroy'
-    if team == testing_team:
-        print(testing_team)
     if True:
         for scenario in playoff_scenarios.copy():
             scenario_copy = copy.deepcopy(scenario)
@@ -373,10 +370,6 @@ def wins_needed(standings, num_playoff_teams, playoff_team):
 def calculate_playoff_scenarios(team, node, weeks_remaining, num_playoff_teams, standings):
     """  """
 
-    if team == 'Zeke and Destroy':
-        x = 'val'
-
-
     for scenario in node.next.copy():
         standings_copy = copy.deepcopy(standings)
         for key, value in scenario.value.items():
@@ -450,15 +443,6 @@ def build_node_tree(league):
         if len(previous_week_outcomes) > 0:
             for idx, outcome in enumerate(previous_week_outcomes):
                 outcome.next = copy.deepcopy(outcomes)
-                # For some fucking reason this boolean is evaluating to true when it is in fact false.
-                if outcome.value['Zeke and Destroy'] == 1 and outcome.value['TuAnon Believer'] == 0 and outcome.value['Game of Mahomes'] == 1:
-                        for dix2, val in enumerate(outcomes):
-                            if val.value['Zeke and Destroy'] == 1 and val.value['TuAnon Believer'] == 1 and val.value['Game of Mahomes'] == 0:
-                                val = 'yo wtf'
-                            else: 
-                                val = 'gtfo2'
-                else:
-                    val = 'gtfo'
         else:
             first_week_outcomes = outcomes
         previous_week_outcomes = outcomes
