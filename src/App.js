@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
@@ -5,9 +6,11 @@ import './App.css';
 function App() {
   const [results, setResults] = useState(0);
 
+  let myParameter = 'skol vikings';
+
   useEffect(() => {
-    fetch('/calculate_playoff_scenarios').then(res => res.json()).then(data => {
-      setResults(data.results);
+    axios.get(`/calculate_playoff_scenarios/${myParameter}`).then(response => {
+      setResults(response.data.results);
     });
   }, []);
 

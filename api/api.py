@@ -4,9 +4,9 @@ from playoff_calculator import League, run, import_espn_league
 
 app = Flask(__name__)
 
-@app.route('/calculate_playoff_scenarios')
-def calculate_playoff_scenarios():
-    print('INFO: calculate_playoff_scenarios')
+@app.route('/calculate_playoff_scenarios/<my_parameter>')
+def calculate_playoff_scenarios(my_parameter):
+    print('INFO: calculate_playoff_scenarios: ', my_parameter)
     league_type = 'espn'
     league_id = 1307984
     year = 2021
@@ -23,4 +23,4 @@ def calculate_playoff_scenarios():
             raise Exception('Platform: {} not found.'.format(league_type))
 
     results = run(league)
-    return {'results': 'run'}
+    return {'results': my_parameter}
