@@ -42,9 +42,10 @@ class League:
 
 
 class Team:
-    def __init__(self, team_name, wins):
+    def __init__(self, team_name, wins, source_id):
         self.team_name = team_name
         self.wins = wins
+        self.source_id = source_id
 
 
 
@@ -74,8 +75,20 @@ def main():
         with open('playoff scenarios {}.json'.format(team), 'w') as outfile:
             json.dump(json_dict, outfile)
 
+
+def get_league(league_type, league_id, year):
+    match league_type:
+        case 'espn':
+            return import_espn_league(league_id, year)
+        case 'sleeper':
+            return import_sleeper_league()
+        case 'yahoo':
+            return import_yahoo_league()
+        case _:
+            raise Exception('Platform: {} not found.'.format(league_type))
+
     
-def run(league):
+def run(league, team_to_calculate):
     """ Calculate Playoff Scenarios. """
     standings = build_standings(league.teams)
 
@@ -127,11 +140,14 @@ def run(league):
     return results
 
 
-def import_espn_league(league_id, year, week):
+def import_espn_league(league_id, year):
     """ Import league data from espn and store in local data structure. """
 
     print('Importing ESPN league: {}'.format(str(league_id)))
     espn_league = espn.League(league_id=league_id, year=year)
+
+    # TODO: determine what week it is
+    week = 12
 
     regular_season_games = espn_league.settings.reg_season_count
     weeks_remaining = regular_season_games - week + 1
@@ -139,7 +155,7 @@ def import_espn_league(league_id, year, week):
     # Create 'Team' objects.
     teams = []
     for espn_team in espn_league.teams:
-        teams.append(Team(espn_team.team_name, sum(outcome == 'W' for outcome in espn_team.outcomes)))
+        teams.append(Team(espn_team.team_name, sum(outcome == 'W' for outcome in espn_team.outcomes), espn_team.team_id))
 
     # Construct remaining schedule.
     remaining_schedule = []

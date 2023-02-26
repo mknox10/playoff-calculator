@@ -1,26 +1,31 @@
-from flask import Flask
-from playoff_calculator import League, run, import_espn_league
+from flask import Flask, jsonify
+from playoff_calculator import *
 
 
 app = Flask(__name__)
 
-@app.route('/calculate_playoff_scenarios/<my_parameter>')
-def calculate_playoff_scenarios(my_parameter):
-    print('INFO: calculate_playoff_scenarios: ', my_parameter)
+@app.route('/calculate_playoff_scenarios/<league_id>/<team_id>')
+def calculate_playoff_scenarios(league_id, team_id):
+    print('INFO: calculate_playoff_scenarios: ', team_id)
     league_type = 'espn'
-    league_id = 1307984
+    #TODO: determine year
     year = 2021
     week = 12
 
-    match league_type:
-        case 'espn':
-            league = import_espn_league(league_id, year, week)
-        case 'sleeper':
-            league = import_sleeper_league()
-        case 'yahoo':
-            league = import_yahoo_league()
-        case _:
-            raise Exception('Platform: {} not found.'.format(league_type))
+    league = get_league(league_type, int(league_id), year)
 
-    results = run(league)
-    return {'results': my_parameter}
+    team_to_calculate = next((team for team in league.teams if team.source_id == int(team_id)), None)
+
+    results = run(league, team_to_calculate)
+    return results[team_to_calculate.team_name]
+
+
+@app.route('/load_teams/<type>/<id>/<year>')
+def get_teams(type, id, year):
+    teams = []
+    for team in get_league(type, int(id), int(year)).teams:
+        teams.append({'name': team.team_name, 'id': team.source_id})
+        # teamsData = json.loads(teamsJson)
+        # teams.append(teamsData)
+    return jsonify({'teams': teams})
+    
