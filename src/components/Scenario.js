@@ -17,9 +17,25 @@ class Scenario extends Component {
   render() {
     return (
       <div>
-        <button onClick={this.toggleDetails}>{this.props.name}</button>
+        <div class="row" onClick={this.toggleDetails}>
+          {[...Array(this.props.weeksRemaining)].map((value, idx1) => 
+            <div class="col">
+              { this.props.depth === idx1 &&
+                <div class="card">
+                    <ol>
+                      {
+                        Object.keys(this.props.data.value).map((key, idx2) => ( 
+                          <li key={idx2}> {key} - { this.props.data.value[key] ? 'WIN' : 'Loss'}</li> 
+                        ))
+                      }
+                    </ol>
+                </div>
+              }
+            </div>
+          )}
+        </div>
         { this.props.data.next && this.state.viewDetails && 
-            this.props.data.next.map(scenario => <Scenario name='Detail' data={scenario} />)
+            this.props.data.next.map(scenario => <Scenario name='Detail' data={scenario} weeksRemaining={this.props.weeksRemaining} depth={this.props.depth+1} />)
         }
       </div>
     );    

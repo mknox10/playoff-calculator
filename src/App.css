@@ -1,5 +1,6 @@
 .App {
   text-align: center;
+  font-family: 'Tilt Warp', cursive;
 }
 
 .App-logo {
@@ -35,4 +36,19 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+
+/* Override Bootstrap */
+.btn-outline-purple {
+  background-color: white !important;
+  color: purple !important;
+}
+
+.form-row {
+  padding-top: 3.5rem;
+}
+
+.input-group {
+  padding: 1rem
 }

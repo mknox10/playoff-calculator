@@ -17,7 +17,11 @@ def calculate_playoff_scenarios(league_id, team_id):
     team_to_calculate = next((team for team in league.teams if team.source_id == int(team_id)), None)
 
     results = run(league, team_to_calculate)
-    return results[team_to_calculate.team_name]
+    weeks_remaining = 2
+    return {
+        'scenarios': results[team_to_calculate.team_name],
+        'weeks_remaining': weeks_remaining
+    }
 
 
 @app.route('/load_teams/<type>/<id>/<year>')
