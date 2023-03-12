@@ -5,6 +5,7 @@ from itertools import combinations, product
 import pandas as pd
 import json
 import espn_api.football as espn
+from espn_api.requests.espn_requests import ESPNInvalidLeague
 import copy
 
 # Definitions
@@ -46,6 +47,11 @@ class Team:
         self.team_name = team_name
         self.wins = wins
         self.source_id = source_id
+
+
+
+class LeagueDoesNotExistException(Exception):
+    pass
 
 
 
@@ -143,15 +149,18 @@ def run(league, team_to_calculate):
 def import_espn_league(league_id, year):
     """ Import league data from espn and store in local data structure. """
 
-    print('Importing ESPN league: {}'.format(str(league_id)))
-    espn_league = espn.League(league_id=league_id, year=year)
+    try:
+        espn_league = espn.League(league_id=league_id, year=year)
+        print('Importing ESPN league: {}'.format(str(league_id)))
+    except ESPNInvalidLeague:
+        raise LeagueDoesNotExistException('Could not find league with id: {}'.format(league_id))
 
     # TODO: determine what week it is
     week = 12
 
     regular_season_games = espn_league.settings.reg_season_count
     weeks_remaining = regular_season_games - week + 1
-
+    
     # Create 'Team' objects.
     teams = []
     for espn_team in espn_league.teams:

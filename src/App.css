@@ -43,6 +43,7 @@
 .btn-outline-purple {
   background-color: white !important;
   color: purple !important;
+  margin-right: 1rem;
 }
 
 .form-row {
@@ -51,4 +52,8 @@
 
 .input-group {
   padding: 1rem
+}
+
+.scenario {
+  margin: 1rem;
 }

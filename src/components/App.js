@@ -20,6 +20,7 @@ class App extends Component {
       leagueURL: '',
       teams: [],
       teamId: '',
+      teamName: '',
       scenarios: [],
       testScenarios: [1, 2, 3, 4, 5],
       weeksRemaining: 0
@@ -37,7 +38,9 @@ class App extends Component {
   
 
   handleTeamSelect(event) {
-    this.setState({teamId: event.target.value})
+    this.setState({
+      teamId: event.target.value
+    });
   }
 
   loadLeague = (event) => {
@@ -45,16 +48,23 @@ class App extends Component {
     let leagueId;
     if (this.state.leagueURL.includes('espn.com')) {
       leagueId = this.state.leagueURL.split("leagueId=")[1].split("&")[0];
+    } else {
+      alert('Platform not supported')
     }
 
     if (!leagueId) {
-      alert('Platform not supported')
+      alert('Invalid URL')
     } else {
-      axios.get(`load_teams/espn/${leagueId}/2022`).then(response => {
-        this.setState(({
-          teams: response.data.teams,
-          leagueId: leagueId
-        }));
+      axios.get(`load_teams/espn/${leagueId}`).then(response => {
+        if (response.data.error) {
+          alert(response.data.error)
+        } else {
+          this.setState(({
+            teams: response.data.teams,
+            leagueId: leagueId,
+            teamId: response.data.teams[0].id
+          }));
+        }
       }).catch((error) => {
         if (error.response) {
           console.log(error.response);
@@ -66,10 +76,16 @@ class App extends Component {
   calculatePlayoffScenarios = (event) => {
     event.preventDefault();
     axios.get(`calculate_playoff_scenarios/${this.state.leagueId}/${this.state.teamId}`).then(response => {
-      this.setState({
-        scenarios: response.data.scenarios.next,
-        weeksRemaining: response.data.weeks_remaining
-      });
+      if (response.data.error) {
+        alert(response.data.error)
+      } else {
+        this.setState({
+          status: response.data.status,
+          scenarios: response.data.scenarios,
+          weeksRemaining: response.data.weeks_remaining,
+          teamName: response.data.team
+        });
+      }
     }).catch((error) => {
       if (error.response) {
         console.log(error.response);
@@ -81,8 +97,10 @@ class App extends Component {
     event.preventDefault();
     axios.get(`calculate_playoff_scenarios/1307984/3`).then(response => {
       this.setState({
-        scenarios: response.data.scenarios.next,
-        weeksRemaining: response.data.weeks_remaining
+        status: response.data.status,
+        scenarios: response.data.scenarios,
+        weeksRemaining: response.data.weeks_remaining,
+        teamName: response.data.team
       });
     }).catch((error) => {
       if (error.response) {
@@ -96,23 +114,14 @@ class App extends Component {
       <div className="App">
         <nav class="navbar navbar-expand-lg bg-body-tertiary">
           <div class="container-fluid">
-            <a class="navbar-brand" href="#">Playoff Calculator</a>
+            <a class="navbar-brand" href="#">Fantasy Football Playoff Machine</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
               <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
               <ul class="navbar-nav">
                 <li class="nav-item">
-                  <a class="nav-link active" aria-current="page" href="#">Home</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="#">Features</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="#">Pricing</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link disabled">Disabled</a>
+                  <a class="nav-link disabled">About</a>
                 </li>
               </ul>
             </div>
@@ -130,6 +139,7 @@ class App extends Component {
                 </div>
                 <div class="col col-lg-2">
                   <input class="btn btn-outline-purple" type="submit" value="Load League" />
+                  <button class="btn btn-outline-purple" onClick={this.calculatePlayoffScenariosDefault}>Default</button>
                 </div>
               </div>
             </form>
@@ -152,7 +162,11 @@ class App extends Component {
             }
           </div>
         </div>
-        <button onClick={this.calculatePlayoffScenariosDefault}>Default</button>
+        
+        { this.state.teamName && 
+          <h2>'{this.state.teamName}' is {this.state.status}</h2>
+        }
+        { this.state.scenarios.map((scenario, i) => <Scenario key={i} name='Scenario' data={scenario} weeksRemaining={this.state.weeksRemaining} depth={0}/>)}
       </div>
     );
   }

@@ -16,7 +16,7 @@ class Scenario extends Component {
 
   render() {
     return (
-      <div>
+      <div class="scenario">
         <div class="row" onClick={this.toggleDetails}>
           {[...Array(this.props.weeksRemaining)].map((value, idx1) => 
             <div class="col">
