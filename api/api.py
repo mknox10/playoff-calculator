@@ -8,7 +8,7 @@ ERROR = 'error'
 app = Flask(__name__)
 
 @app.route('/calculate_playoff_scenarios/<league_id>/<team_id>')
-def calculate_playoff_scenarios(league_id, team_id):
+def calculate_all_playoff_scenarios(league_id, team_id):
     print('INFO: calculate_playoff_scenarios: ', team_id)
     league_type = 'espn'
 
@@ -16,7 +16,7 @@ def calculate_playoff_scenarios(league_id, team_id):
 
     team_to_calculate = next((team for team in league.teams if team.source_id == int(team_id)), None)
 
-    results = run(league, team_to_calculate)
+    results = run_playoff_calculator(league, team_to_calculate)
     weeks_remaining = 2
     return {
         'status': 'in the hunt' if 'next' in results[team_to_calculate.team_name] else results[team_to_calculate.team_name]['value'],

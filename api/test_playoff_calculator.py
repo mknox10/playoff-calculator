@@ -1,7 +1,7 @@
 import filecmp
 import unittest
 
-from playoff_calculator import League, Team, Node, run, build_node_tree, calculate_playoff_scenarios, compile_scenario_list, wins_needed
+from playoff_calculator import League, Team, ScenarioStructure, run_playoff_calculator, calculate_all_possible_scenarios, calculate_all_playoff_scenarios, compile_scenario_list, wins_needed
 
 import json
 
@@ -59,7 +59,7 @@ class TestPlayoffCalculator(unittest.TestCase):
 
 
         # Test one week remaining.
-        results = run(League(teams, [week_13], 6, 13))
+        results = run_playoff_calculator(League(teams, [week_13], 6, 13), )
 
         self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
         self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)
@@ -85,7 +85,7 @@ class TestPlayoffCalculator(unittest.TestCase):
 
 
         # Test for two weeks remaining
-        results = run(League(teams, [week_13, week_14], 6, 14))
+        results = run_playoff_calculator(League(teams, [week_13, week_14], 6, 12))
 
         self.assertEqual(results['Calvin Ridely\'s Parlays'], CLINCHED)
         self.assertEqual(results['Kyler\'s Study Zone'], CLINCHED)

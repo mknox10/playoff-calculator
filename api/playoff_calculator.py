@@ -1,19 +1,18 @@
-from distutils.command.build_scripts import first_line_re
-from re import match
-from turtle import pos
-from itertools import combinations, product
 import pandas as pd
 import json
 import espn_api.football as espn
-from espn_api.requests.espn_requests import ESPNInvalidLeague
 import copy
+import sys
+
+from espn_api.requests.espn_requests import ESPNInvalidLeague
+from itertools import combinations, product
 
 # Definitions
 # Outcome - Result of a matchup between two teams.
 # Scenario - Combination of outcomes for a given week.
 # Sequence - List of scenarios.
 
-class Node:
+class ScenarioStructure:
     def __init__(self, value=None, week=None):
         self.value = value   # dict of team's win counts
         self.week = week     # fantasy football week
@@ -25,46 +24,34 @@ class Node:
         return (str(self.week) + " - " if self.week != None else "") + str(self.value)
 
     def copy(self):
-        copy = Node(self.value)
+        copy = ScenarioStructure(self.value)
         copy.next = self.next.copy() if len(self.next) > 0 else None
         copy.previous = self.previous.copy() if self.previous else None
         return copy
-
-
 
 class League:
     def __init__(self, teams, remaining_schedule, playoff_team_count, regular_season_game_count):
         self.teams = teams
         self.remaining_schedule = remaining_schedule
-        self.weeks_remaining = len(remaining_schedule)
         self.playoff_team_count = playoff_team_count
         self.regular_season_game_count = regular_season_game_count
-
-
+        self.weeks_remaining = len(remaining_schedule)
+        self.current_week = self.regular_season_game_count - self.weeks_remaining
 
 class Team:
-    def __init__(self, team_name, wins, source_id):
+    def __init__(self, team_name, wins):
         self.team_name = team_name
         self.wins = wins
-        self.source_id = source_id
 
 
-
-class LeagueDoesNotExistException(Exception):
-    pass
 
 
 
 def main():
-    # parameters 
-    # league_type = sys[argv[1]] # espn
-    # league_id = int(sys.argv[2]) # 1307984
-    # year = int(sys.argv[3]) # 2021
-    # week = (int(sys.argv[4]))
-    league_type = 'espn'
-    league_id = 1307984
-    year = 2021
-    week = 12
+    league_type = sys[argv[1]] # espn
+    league_id = int(sys.argv[2]) # 1307984
+    year = int(sys.argv[3]) # 2021
+    week = (int(sys.argv[4])) # 12
 
     match league_type:
         case 'espn':
@@ -76,36 +63,40 @@ def main():
         case _:
             raise Exception('Platform: {} not found.'.format(league_type))
 
-    results = run(league)
+    results = run_playoff_calculator(league)
     for team, json_dict in results.items():
         with open('playoff scenarios {}.json'.format(team), 'w') as outfile:
             json.dump(json_dict, outfile)
 
 
-def get_league(league_type, league_id, year):
-    match league_type:
-        case 'espn':
-            return import_espn_league(league_id, year)
-        case 'sleeper':
-            return import_sleeper_league()
-        case 'yahoo':
-            return import_yahoo_league()
-        case _:
-            raise Exception('Platform: {} not found.'.format(league_type))
 
-    
-def run(league, team_to_calculate):
-    """ Calculate Playoff Scenarios. """
+def run_playoff_calculator(league):
+    """ Calculates every relevant scenario in which each team will make the playoffs. 
+
+        Args:
+            league: League instance.
+
+        Returns: A dictionary of each team with a list of dictionaries each representing different possible playoff scenarios for
+            the given team. If the team has already been clinched or eliminated from playoff contention it will return a string 
+            value 'clinched' or 'eliminated' respectively. Given the team is still in playoff contention the dictionary for each
+            week will be a nested dictionary that is as deep as the number of weeks remaining in the schedule. Each dictionary will
+            have two keys. 
+                'value': another dictionary with keys representing teams in the league with those values being a 1 or 0 where a 1
+                    represents a win is needed an a 0 represents a loss is needed.
+                'next': returns a list of dictionaries with the needed scenarios for the next week.
+                OR
+                'tiebreaker': True/False value representing if a tiebreaker is needed for the given team to make the playoffs.
+    """
+
     standings = build_standings(league.teams)
 
     # create a list of base nodes, one for each team
     scenarios = {}
     for team in league.teams:
-        scenarios[team.team_name] = Node(standings)
-        scenarios[team.team_name].next = build_node_tree(league)
-
-    for team, node in scenarios.items():
-        calculate_playoff_scenarios(team, node, league.weeks_remaining, league.playoff_team_count, node.value)
+        node = ScenarioStructure(value=standings, week=league.current_week)
+        node.next = calculate_all_possible_scenarios(league)
+        scenarios[team.team_name] = node
+        calculate_all_playoff_scenarios(team.team_name, node, league.weeks_remaining, league.playoff_team_count, node.value)
     
     results = {}
     for team, node in scenarios.items():
@@ -146,17 +137,44 @@ def run(league, team_to_calculate):
     return results
 
 
-def import_espn_league(league_id, year):
+
+def calculate_all_playoff_scenarios(team, node, weeks_remaining, num_playoff_teams, standings):
+    """ Calculates every possible scenario in which a 'team' will makes the playoffs. Includes scenarios which are not relevant.
+     
+    Args:
+        team: The team in which the playoff scenarios will be calculated. Team instance.
+        node: An initialized ScenarioStructure that will be update.
+        weeks_remaining: The number of weeks remaining.
+        num_playoff_teams: The number of teams that make the playoffs.
+        standings: The current standings.
+    """
+
+    for scenario in node.next.copy():
+        standings_copy = copy.deepcopy(standings)
+        for key, value in scenario.value.items():
+            standings_copy[key] += value
+
+        playoff_status = wins_needed(standings_copy, num_playoff_teams, team)
+        wins = playoff_status['wins']
+        # assume the team will win out, we will handle the situation in which they don't in future iterations.
+        if standings_copy[team] + weeks_remaining-1 < wins:
+            node.next.remove(scenario)
+        elif scenario.next:
+            calculate_all_playoff_scenarios(team, scenario, weeks_remaining-1, num_playoff_teams, standings_copy)
+        elif playoff_status['tiebreaker']:
+            # Only need to mark the last week
+            scenario.tiebreaker = True
+
+
+
+def import_espn_league(league_id, year, week):
     """ Import league data from espn and store in local data structure. """
 
     try:
         espn_league = espn.League(league_id=league_id, year=year)
         print('Importing ESPN league: {}'.format(str(league_id)))
     except ESPNInvalidLeague:
-        raise LeagueDoesNotExistException('Could not find league with id: {}'.format(league_id))
-
-    # TODO: determine what week it is
-    week = 12
+        raise Exception('Could not find league with id: {}'.format(league_id))
 
     regular_season_games = espn_league.settings.reg_season_count
     weeks_remaining = regular_season_games - week + 1
@@ -392,27 +410,6 @@ def wins_needed(standings, num_playoff_teams, playoff_team):
 
 
 
-def calculate_playoff_scenarios(team, node, weeks_remaining, num_playoff_teams, standings):
-    """  """
-
-    for scenario in node.next.copy():
-        standings_copy = copy.deepcopy(standings)
-        for key, value in scenario.value.items():
-            standings_copy[key] += value
-
-        playoff_status = wins_needed(standings_copy, num_playoff_teams, team)
-        wins = playoff_status['wins']
-        # assume the team will win out, we will handle the situation in which they don't in future iterations.
-        if standings_copy[team] + weeks_remaining-1 < wins:
-            node.next.remove(scenario)
-        elif scenario.next:
-            calculate_playoff_scenarios(team, scenario, weeks_remaining-1, num_playoff_teams, standings_copy)
-        elif playoff_status['tiebreaker']:
-            # Only need to mark the last week
-            scenario.tiebreaker = True
-
-
-
 def check_non_exclusive_scenario(scenario1, scenario2, team):
     """   """
     # The number of game out comes that don't match, for a non-exclusive scenario there must be less than 2.
@@ -450,12 +447,13 @@ def get_unique_scenarios(node):
 
 
 
-def build_node_tree(league):
-    """" 
-    Build the Node tree. 
-      remaining_schedule:
-      reg_season_count: Number of games in the regular season
+def calculate_all_possible_scenarios(league):
+    """ Builds a node type structure of every single possible combination of outcomes for the remaining schedule.
+
+        Args:
+            league - League instance.
     """
+
     #TODO: clean up function
     remaining_schedule = league.remaining_schedule.copy()
     reg_season_count = league.regular_season_game_count
@@ -477,7 +475,12 @@ def build_node_tree(league):
 
 
 def calculate_weekly_outcomes(matchups, week_number):
-    """ Returns a list of all possible outcomes of a given week. """
+    """ Builds a structure of all possible combinations of scenarios for the given week. 
+
+        Args:
+            matchups: list of every matchup in a week.
+            week_number: the current week.
+    """
 
     case = ['W', 'L']
     outcomes = []
@@ -488,7 +491,7 @@ def calculate_weekly_outcomes(matchups, week_number):
             outcome = permutation[x]
             scenario[matchup[0]] = 1 if outcome == 'W' else 0
             scenario[matchup[1]] = 0 if outcome == 'W' else 1
-        node = Node(scenario, week_number)
+        node = ScenarioStructure(scenario, week_number)
         node.next = []
         outcomes.append(node)
     return outcomes
