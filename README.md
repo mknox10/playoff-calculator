@@ -1,74 +1,118 @@
-# Getting Started with Create React App
+# Playoff Calculator
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Python script that calculates all possible and relevant scenarios where a team will make the playoffs fantasy football playoffs.
 
-## Available Scripts
+# Installation
 
-In the project directory, you can run:
+```bash
+pip install -r /path/to/requirements.txt
+```
 
-### `npm start`
+# Usage
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Arguments:
+    league_type: 'espn', 'yahoo', 'sleeper' (Currently ESPN is the only supported platform).
+    league_id: League ID from fantasy football platform.
+        ex. https://fantasy.espn.com/football/team?leagueId=58391695&teamId=1&seasonId=2023 league_id = 58391695
+    year: Which fantasy football season to load.
+    week: Current NFL/Fantasy Football week.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+    python playoff_calculator.py league_id  
+```
 
-### `npm test`
+# Output Structure
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The output is a json structure in list form. Each value in the list contains different possible scenarios that a team will make the playoffs. The 'value' contains each individual matchup outcome that is needed.
+An outcome will contain the team as the key and the win or loss result as the value. Where a one represents a needed win and zero represents a needed loss. The 'next' contains a list of the needed results for 
+the following week's matchups. This will be a nested structure as deep as the weeks remaining. The deepest part of the structure will contain the 'tiebreaker' which is a true or false marking whether or not the
+tiebreaker is needed for the given team to make the playoffs.
 
-### `npm run build`
+```json
+[
+  {
+    "value": {
+      "Zeke and Destroy": 1
+    },
+    "next": [
+      {
+        "value": {
+          "TuAnon Believer": 0,
+          "Game of Mahomes": 0,
+          "Zeke and Destroy": 1
+        },
+        "tiebreaker": true
+      }
+    ]
+  },
+  {
+    "value": {
+      "Zeke and Destroy": 1,
+      "TuAnon Believer": 0,
+      "Game of Mahomes": 1
+    },
+    "next": [
+      {
+        "value": {
+          "TuAnon Believer": 1,
+          "Game of Mahomes": 0,
+          "Zeke and Destroy": 1
+        },
+        "tiebreaker": true
+      }
+    ]
+  },
+  {
+    "value": {
+      "Zeke and Destroy": 1,
+      "TuAnon Believer": 0
+    },
+    "next": [
+      {
+        "value": {
+          "Game of Mahomes": 0,
+          "Zeke and Destroy": 1
+        },
+        "tiebreaker": true
+      }
+    ]
+  }
+]
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+In the example above is the playoff scenarios for 'Zeke and Destroy' to make the playoffs with two weeks left in the season and the following standings:
+``` python
+    Team('Calvin Ridely\'s Parlays', 11),
+    Team('Kyler\'s Study Zone', 9),
+    Team('Hooked on a Thielen', 8),
+    Team('Scam Akers', 8),
+    Team('Hurts Doughnut', 8),
+    Team('TuAnon Believer', 6),
+    Team('Game of Mahomes', 6),
+    Team(ZEKE_AND_DESTROY, 5),
+    Team(THE_ADAMS_FAMILY, 5),
+    Team('Mixon It Up', 3),
+    Team('Breece Mode', 2),
+    Team('Olave Garden', 1)
+```
+In the first scenario, if 'Zeke and Destroy' wins their upcoming matchup. In the last week of the season they must win again, but 'Game of Mahomes' and 'TuAnon Believer' must also lose. 
+In the second scenario, if 'Zeke and Destroy' wins the upcoming matchup along with 'Game of Mahomes' while 'TuAnon Believer' loses. In the following week 'Zeke and Destroy' must win again
+    along with 'TuAnon Believer' while 'Game of Mahomes' must lose.
+In the third/final scenario, if 'Zeke and Destroy' wins their upcoming matchup while 'TuAnon Believer' loses. In the following week 'Zeke and Destroy' must win again, while 'Game of Mahomes'
+    must lose.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Limitations
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Does not handle tie games in any capacity.
+- Does not identify which teams must be beat in a tiebreaker scenario.
+- Scenarios are some times repetitive. As with the above scenario 'Zeke and Destroy' must win both remaining games while 'TuAnon Believer' and 'Game of Mahomes' must each lose at least one of 
+    their remaining games. The playoff calculator currently will calculate every scenario in which that happens instead of diagnosing that.
+- Any playoff scenarios larger than twelve teams and two weeks remaining are incredibly slow. This algorithm grows exponentially slower with additional teams or weeks.
 
-### `npm run eject`
+# Future Work
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Refactor code (It's messy and hard to read)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Reasoning 
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-
-### Tutorial
-https://blog.miguelgrinberg.com/post/how-to-create-a-react--flask-project
-https://code.visualstudio.com/docs/python/tutorial-flask
+Used an extensive use of dictionaries in this project in order to make exporting to json easier. In my opinion this makes the code harder to understand but makes reading the output file easier.
